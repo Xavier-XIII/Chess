@@ -22,7 +22,7 @@ player_playing_as = "white"
 currently_playing = "white"
 selected_piece = None
 selected_piece_moves = None
-updated = False
+updated = True
 
 images = {
     "white": {
@@ -155,6 +155,5 @@ def tick_game():
 
 if __name__ == "__main__":
     tick_game()
-    pygame.display.flip()
     root.mainloop()
     pygame.quit()
