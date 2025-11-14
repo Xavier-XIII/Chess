@@ -16,7 +16,8 @@ class Board:
         return self.piecesMap[x][y]
 
     def move_piece(self, xFrom: int, yFrom:int, xTo: int, yTo: int):
-        print("moving piece from", xFrom, yFrom, "to", xTo, yTo)
+        if xTo == xFrom and yTo == yFrom: return
+
         self.piecesList.remove(self.piecesMap[xFrom][yFrom])
         if self.piecesMap[xTo][yTo] is not None:
             self.piecesList.remove(self.piecesMap[xTo][yTo])

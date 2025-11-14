@@ -1,30 +1,82 @@
-import pygame
 import sys
+import tkinter as tk
 
+import pygame
+
+from Board import Board
+from Menu import Menu
+from Piece import Piece
 from Renderer import Renderer
 
 unit = 60  # size of each square
 fps = 15
-renderer = Renderer(unit, fps)
-
-from Board import Board
-from Piece import Piece
-
+menu = Menu(tk.Tk())
 board = Board()
+renderer = Renderer(unit, fps, board)
 display = renderer.display
 clock = renderer.clock
 frequency = 1  # in updates per second
 fps_per_frequency = int(fps / frequency)
 frame = fps_per_frequency
 player_playing_as = "white"
+currently_playing = "white"
 selected_piece = None
+selected_piece_moves = None
 updated = False
+
+images = {
+    "white": {
+        "pawn": pygame.transform.scale(pygame.image.load('images/pieces/white_pawn.png').convert_alpha(), (unit, unit)),
+        "knight": pygame.transform.scale(pygame.image.load('images/pieces/white_knight.png').convert_alpha(), (unit, unit)),
+        "bishop": pygame.transform.scale(pygame.image.load('images/pieces/white_bishop.png').convert_alpha(), (unit, unit)),
+        "rook": pygame.transform.scale(pygame.image.load('images/pieces/white_rook.png').convert_alpha(), (unit, unit)),
+        "queen": pygame.transform.scale(pygame.image.load('images/pieces/white_queen.png').convert_alpha(), (unit, unit)),
+        "king": pygame.transform.scale(pygame.image.load('images/pieces/white_king.png').convert_alpha(), (unit, unit))
+    },
+    "black": {
+        "pawn": pygame.transform.scale(pygame.image.load('images/pieces/black_pawn.png').convert_alpha(), (unit, unit)),
+        "knight": pygame.transform.scale(pygame.image.load('images/pieces/black_knight.png').convert_alpha(), (unit, unit)),
+        "bishop": pygame.transform.scale(pygame.image.load('images/pieces/black_bishop.png').convert_alpha(), (unit, unit)),
+        "rook": pygame.transform.scale(pygame.image.load('images/pieces/black_rook.png').convert_alpha(), (unit, unit)),
+        "queen": pygame.transform.scale(pygame.image.load('images/pieces/black_queen.png').convert_alpha(), (unit, unit)),
+        "king": pygame.transform.scale(pygame.image.load('images/pieces/black_king.png').convert_alpha(), (unit, unit))
+    }
+}
+
+
+def get_image(piece: Piece):
+    return images[piece.colour][piece.name]
 
 
 def place_piece(colour: str, name: str, x: int, y: int):
     piece = Piece(name, colour, x, y)
-    renderer.draw_piece(piece.get_image(), x, y)
+    renderer.draw_piece(get_image(piece), x, y)
     board.add_piece(piece, x, y)
+
+
+def set_selected_piece(piece: Piece | None):
+    global selected_piece
+    global selected_piece_moves
+
+    selected_piece = piece
+    if piece is not None:
+        selected_piece_moves = piece.get_possible_moves(board.piecesMap)
+    else:
+        selected_piece_moves = None
+
+
+def try_move_piece(piece: Piece, xTo: int, yTo: int) -> bool:
+    global currently_playing
+    global selected_piece_moves
+
+    if piece.colour != currently_playing:
+        return False
+    if (xTo, yTo) in selected_piece_moves:
+        board.move_piece(piece.x, piece.y, xTo, yTo)
+        currently_playing = "black" if currently_playing == "white" else "white"
+        set_selected_piece(None)
+        return True
+    return False
 
 
 def manage_click(x: int, y: int):
@@ -32,17 +84,17 @@ def manage_click(x: int, y: int):
     global updated
     boardX = int(x / unit)
     boardY = int(y / unit)
-    print("click at", x, y, boardX, boardY)
 
-    if selected_piece is None:
-        selected_piece = board.get_piece(boardX, boardY)
-        print("selected piece:", selected_piece)
-    else:
-        board.move_piece(selected_piece.x, selected_piece.y, boardX, boardY)
-        selected_piece = None
-        print("moved piece to:", boardX, boardY)
-        print(board.get_piece(boardX, boardY))
     updated = True
+
+    if selected_piece is not None and boardX == selected_piece.x and boardY == selected_piece.y:
+        set_selected_piece(None)
+        return
+
+    if selected_piece is None or (boardX, boardY) not in selected_piece_moves:
+        set_selected_piece(board.get_piece(boardX, boardY))
+    else:
+        try_move_piece(selected_piece, boardX, boardY)
 
 
 def place_pieces():
@@ -56,7 +108,7 @@ def place_pieces():
     place_piece("white", "king", 4, 7)
     place_piece("white", "bishop", 5, 7)
     place_piece("white", "knight", 6, 7)
-    place_piece("white", "bishop", 7, 7)
+    place_piece("white", "rook", 7, 7)
     place_piece("black", "rook", 0, 0)
     place_piece("black", "knight", 1, 0)
     place_piece("black", "bishop", 2, 0)
@@ -64,40 +116,44 @@ def place_pieces():
     place_piece("black", "king", 4, 0)
     place_piece("black", "bishop", 5, 0)
     place_piece("black", "knight", 6, 0)
-    place_piece("black", "bishop", 7, 0)
+    place_piece("black", "rook", 7, 0)
 
 renderer.draw_grid()
 place_pieces()
 
-# forever loop
-while True:
-    # frame clock ticking
-    clock.tick(fps)
+def run_game():
+    global updated
+    while True:
+        clock.tick(fps)
 
-    # draw stuff once per second
-    if frame == fps_per_frequency:
+        # if frame == fps_per_frequency:
+        #
+        #     frame = 0
+        #     ticks = pygame.time.get_ticks()
+        #
+        # frame += 1
 
-        frame = 0
-        ticks = pygame.time.get_ticks()
+        if updated:
+            renderer.draw_grid()
+            if selected_piece is not None:
+                renderer.draw_square(selected_piece.x, selected_piece.y, (210, 224, 99))
+                if selected_piece.colour == currently_playing: renderer.draw_possible_moves(selected_piece_moves)
+            for piece in board.piecesList:
+                renderer.draw_piece(get_image(piece), piece.x, piece.y)
+            updated = False
 
-    frame += 1
+        pygame.display.flip()
 
-    if updated:
-        print("updating board")
-        renderer.draw_grid()
-        if selected_piece is not None:
-            renderer.draw_square(selected_piece.x, selected_piece.y, (221, 227, 57))
-        for piece in board.piecesList:
-            renderer.draw_piece(piece.get_image(), piece.x, piece.y)
-        updated = False
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    manage_click(event.pos[0], event.pos[1])
 
-    pygame.display.flip()
+        menu.master.update()
 
-    # event loop
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:
-                manage_click(event.pos[0], event.pos[1])
+
+if __name__ == "__main__":
+    run_game()

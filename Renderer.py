@@ -1,31 +1,32 @@
 import pygame
+from pygame import gfxdraw
+
+from Board import Board
 
 DARK_GREEN = (40, 173, 49)
 LIGHT_GREEN = (79, 238, 90)
-RED = (191, 25, 25)
+YELLOW = (221, 227, 57) # 221, 227, 57
+
+base_radius = 15
 
 class Renderer:
-    def __init__(self, unit: int, fps: int):
-        # initialize pygame
+    def __init__(self, unit: int, fps: int, board: Board):
         pygame.init()
 
-        # configurations
         self.unit = unit
         self.fps = fps
         self.window_height = 8 * self.unit
         self.window_width = 8 * self.unit
 
-        # creating window
         self.display = pygame.display.set_mode((self.window_width, self.window_height))
 
-        # title and logo
         pygame.display.set_caption("Chess")
         # https://www.freepik.com/premium-vector/chess-logo-business-abstract-concept-icon-black-game-figure-sign-vector-flat-style_65312141.htm
         logo = pygame.image.load('images/logo.png')
         pygame.display.set_icon(logo)
 
-        # creating our frame regulator
         self.clock = pygame.time.Clock()
+        self.board = board
 
     def draw_grid(self):
         for x in range(8):
@@ -42,3 +43,17 @@ class Renderer:
 
     def draw_piece(self, image, x: int, y: int):
         self.display.blit(image, (x * self.unit, y * self.unit))
+
+    def draw_circle(self, x: int, y: int, radius: int = base_radius):
+        gfxdraw.filled_circle(self.display, x * self.unit + int(self.unit / 2),
+                              y * self.unit + int(self.unit / 2), radius, YELLOW)
+        gfxdraw.aacircle(self.display, x * self.unit + int(self.unit / 2),
+                         y * self.unit + int(self.unit / 2), radius, YELLOW)
+
+    def draw_possible_moves(self, moves: set[tuple[int, int]]):
+        for move in moves:
+            target_x = move[0]
+            target_y = move[1]
+            if 0 <= target_x < 8 and 0 <= target_y < 8:
+                self.draw_circle(target_x, target_y)
+
