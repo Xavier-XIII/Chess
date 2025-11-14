@@ -25,7 +25,6 @@ class Renderer:
         logo = pygame.image.load('images/logo.png')
         pygame.display.set_icon(logo)
 
-        self.clock = pygame.time.Clock()
         self.board = board
 
     def draw_grid(self):

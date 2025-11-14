@@ -10,11 +10,11 @@ from Renderer import Renderer
 
 unit = 60  # size of each square
 fps = 15
-menu = Menu(tk.Tk())
+root = tk.Tk()
+menu = Menu(root, unit)
 board = Board()
 renderer = Renderer(unit, fps, board)
 display = renderer.display
-clock = renderer.clock
 frequency = 1  # in updates per second
 fps_per_frequency = int(fps / frequency)
 frame = fps_per_frequency
@@ -121,39 +121,40 @@ def place_pieces():
 renderer.draw_grid()
 place_pieces()
 
-def run_game():
+def tick_game():
     global updated
-    while True:
-        clock.tick(fps)
+    # clock.tick(fps)
 
-        # if frame == fps_per_frequency:
-        #
-        #     frame = 0
-        #     ticks = pygame.time.get_ticks()
-        #
-        # frame += 1
+    # if frame == fps_per_frequency:
+    #
+    #     frame = 0
+    #     ticks = pygame.time.get_ticks()
+    #
+    # frame += 1
 
-        if updated:
-            renderer.draw_grid()
-            if selected_piece is not None:
-                renderer.draw_square(selected_piece.x, selected_piece.y, (210, 224, 99))
-                if selected_piece.colour == currently_playing: renderer.draw_possible_moves(selected_piece_moves)
-            for piece in board.piecesList:
-                renderer.draw_piece(get_image(piece), piece.x, piece.y)
-            updated = False
+    if updated:
+        renderer.draw_grid()
+        if selected_piece is not None:
+            renderer.draw_square(selected_piece.x, selected_piece.y, (210, 224, 99))
+            if selected_piece.colour == currently_playing: renderer.draw_possible_moves(selected_piece_moves)
+        for piece in board.piecesList:
+            renderer.draw_piece(get_image(piece), piece.x, piece.y)
+        updated = False
 
-        pygame.display.flip()
+    pygame.display.flip()
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1:
-                    manage_click(event.pos[0], event.pos[1])
-
-        menu.master.update()
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT or menu.should_quit:
+            pygame.quit()
+            sys.exit()
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:
+                manage_click(event.pos[0], event.pos[1])
+    root.after(10, tick_game)
 
 
 if __name__ == "__main__":
-    run_game()
+    tick_game()
+    pygame.display.flip()
+    root.mainloop()
+    pygame.quit()
