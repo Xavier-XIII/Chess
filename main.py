@@ -9,15 +9,11 @@ from Piece import Piece
 from Renderer import Renderer
 
 unit = 60  # size of each square
-fps = 15
 root = tk.Tk()
 menu = Menu(root, unit)
 board = Board()
-renderer = Renderer(unit, fps, board)
+renderer = Renderer(unit, board)
 display = renderer.display
-frequency = 1  # in updates per second
-fps_per_frequency = int(fps / frequency)
-frame = fps_per_frequency
 player_playing_as = "white"
 currently_playing = "white"
 selected_piece = None
@@ -131,14 +127,6 @@ place_pieces()
 
 def tick_game():
     global updated
-    # clock.tick(fps)
-
-    # if frame == fps_per_frequency:
-    #
-    #     frame = 0
-    #     ticks = pygame.time.get_ticks()
-    #
-    # frame += 1
 
     if updated:
         renderer.draw_grid()
@@ -151,7 +139,7 @@ def tick_game():
 
     pygame.display.flip()
 
-    menu.update(currently_playing)
+    updated = menu.update(currently_playing, updated)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT or menu.should_quit:

@@ -53,8 +53,9 @@ class Menu:
 
         self.should_quit = False
 
-    def update(self, currently_playing: str):
+    def update(self, currently_playing: str, updated: bool) -> bool:
         self.currently_playing_label.config(text=f"{currently_playing.capitalize()}'s turn")
+        return updated
 
     def set_restart(self, restart: Callable):
         self.restart = restart

@@ -5,16 +5,15 @@ from Board import Board
 
 DARK_GREEN = (40, 173, 49)
 LIGHT_GREEN = (79, 238, 90)
-YELLOW = (221, 227, 57) # 221, 227, 57
+YELLOW = (221, 227, 57)
 
 base_radius = 15
 
 class Renderer:
-    def __init__(self, unit: int, fps: int, board: Board):
+    def __init__(self, unit: int, board: Board):
         pygame.init()
 
         self.unit = unit
-        self.fps = fps
         self.window_height = 8 * self.unit
         self.window_width = 8 * self.unit
 

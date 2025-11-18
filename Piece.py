@@ -37,13 +37,13 @@ class Piece:
             case "queen":
                 moves = self.get_linear_moves(board_map, bishop_directions.union(rook_directions))
             case "king":
-                moves = self.get_offset_moves(board_map, king_offsets)
+                moves = self.get_offset_moves(board_map, king_offsets) # TODO: castling
 
         return moves
 
     def get_pawn_moves(self, board_map: dict) -> set[tuple[int, int]]:
         moves = set()
-        # TODO: En passant, promotion
+        # TODO: promotion
 
         if self.y == 7 or self.y == 0:
             return moves
