@@ -40,3 +40,6 @@ class Board:
         for piece in self.piecesList:
             if piece.name == "pawn" :
                 piece.increase_time_since_last_move()
+
+    # TODO: Chess coordinates to xy coordinates
+    # TODO: FEN string

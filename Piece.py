@@ -14,6 +14,10 @@ rook_directions = {(-1, 0), (1, 0), (0, -1), (0, 1)}
 king_offsets = {(-1, -1), (1, -1), (1, 1), (-1, 1), (-1, 0), (1, 0), (0, -1), (0, 1)}
 
 
+def within_bounds(x: int, y: int) -> bool:
+    return 0 <= x < 8 and 0 <= y < 8
+
+
 class Piece:
     def __init__(self, name: str, colour: str, x: int, y: int):
         self.name = name
@@ -54,10 +58,10 @@ class Piece:
             if (((self.y == 1 and self.colour == "black") or (self.y == 6 and self.colour == "white"))
                     and board_map[self.x][self.y + 2 * i] is None):
                 moves.add((0, 2 * i))
-        if board_map[self.x + 1][self.y + i] is not None:
+        if within_bounds(self.x + 1, self.y + i) and board_map[self.x + 1][self.y + i] is not None:
             if board_map[self.x + 1][self.y + i].colour != self.colour:
                 moves.add((1, i))
-        if board_map[self.x - 1][self.y + i] is not None:
+        if within_bounds(self.x - 1, self.y + i) and board_map[self.x - 1][self.y + i] is not None:
             if board_map[self.x - 1][self.y + i].colour != self.colour:
                 moves.add((-1, i))
 

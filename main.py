@@ -10,8 +10,8 @@ from Renderer import Renderer
 
 unit = 60  # size of each square
 root = tk.Tk()
-menu = Menu(root, unit)
 board = Board()
+menu = Menu(root, unit, board)
 renderer = Renderer(unit, board)
 display = renderer.display
 player_playing_as = "white"
@@ -127,6 +127,7 @@ place_pieces()
 
 def tick_game():
     global updated
+    global currently_playing
 
     if updated:
         renderer.draw_grid()
@@ -139,7 +140,9 @@ def tick_game():
 
     pygame.display.flip()
 
-    updated = menu.update(currently_playing, updated)
+    result = menu.update(currently_playing, updated)
+    updated = result[0]
+    currently_playing = result[1]
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT or menu.should_quit:
