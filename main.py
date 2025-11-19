@@ -8,6 +8,8 @@ from Menu import Menu
 from Piece import Piece
 from Renderer import Renderer
 
+#This is a fork of chess repo
+
 unit = 60  # size of each square
 root = tk.Tk()
 board = Board()
