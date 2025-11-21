@@ -216,7 +216,6 @@ class King(Piece):
         self.is_castling = False
         self.in_check = False
 
-    # TODO: castling
     def get_possible_moves(self, board_map: list[list[Piece]]) -> set[tuple[int, int]]:
         moves = get_offset_moves(self, board_map, king_offsets)
         if (self.colour == "white" and self.y == 7) or (self.colour == "black" and self.y == 0) and not self.in_check and not self.has_moved:

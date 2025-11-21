@@ -21,6 +21,8 @@ class Menu:
         self.unrestricted = False
         self.playing_as = "manual"
         self.opponent = "manual"
+        self.ai_state = "pause"
+        self.changed_squares = set()
 
         self.master = master
         self.master.title("Chess")
@@ -58,11 +60,11 @@ class Menu:
         ai_control_frame.pack(side="right", padx=10, pady=20, anchor="nw")
         ai_control_label = tk.Label(ai_control_frame, text="AI Control:", font=title, bg=LIGHT_GREY, fg="white")
         ai_control_label.pack(pady=10)
-        self.play_button = tk.Button(ai_control_frame, text="Play", command=self.compute_turn, font=small, bg=LIGHT_GREY, fg="white")
+        self.play_button = tk.Button(ai_control_frame, text="Play", command=lambda: self.set_ai_state("play"), state="disabled", font=small, bg=LIGHT_GREY, fg="white")
         self.play_button.pack(pady=5)
-        self.pause_button = tk.Button(ai_control_frame, text="Pause", command=self.compute_turn, font=small, bg=LIGHT_GREY, fg="white")
+        self.pause_button = tk.Button(ai_control_frame, text="Pause", command=lambda: self.set_ai_state("pause"), state="disabled", font=small, bg=GREEN, fg="white")
         self.pause_button.pack(pady=5)
-        self.step_button = tk.Button(ai_control_frame, text="Step", command=self.compute_turn, font=small, bg=LIGHT_GREY, fg="white")
+        self.step_button = tk.Button(ai_control_frame, text="Step", command=lambda: self.set_ai_state("step"), state="disabled", font=small, bg=LIGHT_GREY, fg="white")
         self.step_button.pack(pady=5)
 
         self.unrestricted_button = tk.Button(ai_control_frame, text="Restricted", command=self.flip_restricted, font=small, bg=LIGHT_GREY, fg="white")
@@ -99,8 +101,8 @@ class Menu:
         self.opponent_manual.pack(pady=5, side="left")
         self.opponent_random = tk.Button(opponent_frame, text="Random", command=lambda: self.set_opponent("random"), font=small, bg=LIGHT_GREY, fg="white")
         self.opponent_random.pack(pady=5, side="left")
-        self.opponent_our_ai = tk.Button(opponent_frame, text="Our AI", command=lambda: self.set_opponent("our_ai"), font=small, bg=LIGHT_GREY, fg="white")
-        self.opponent_our_ai.pack(pady=5, side="left")
+        self.opponent_chessgpt = tk.Button(opponent_frame, text="ChessGPT", command=lambda: self.set_opponent("chessgpt"), font=small, bg=LIGHT_GREY, fg="white")
+        self.opponent_chessgpt.pack(pady=5, side="left")
         self.opponent_stockfish = tk.Button(opponent_frame, text="Stockfish", command=lambda: self.set_opponent("stockfish"), font=small, bg=LIGHT_GREY, fg="white")
         self.opponent_stockfish.pack(pady=5, side="left")
 
@@ -112,28 +114,22 @@ class Menu:
         self.playing_as_manual.pack(pady=5, side="left")
         self.playing_as_random = tk.Button(playing_as_frame, text="Random", command=lambda: self.set_playing_as("random"), font=small, bg=LIGHT_GREY, fg="white")
         self.playing_as_random.pack(pady=5, side="left")
-        self.playing_as_our_ai = tk.Button(playing_as_frame, text="Our AI", command=lambda: self.set_playing_as("our_ai"), font=small, bg=LIGHT_GREY, fg="white")
-        self.playing_as_our_ai.pack(pady=5, side="left")
+        self.playing_as_chessgpt = tk.Button(playing_as_frame, text="ChessGPT", command=lambda: self.set_playing_as("chessgpt"), font=small, bg=LIGHT_GREY, fg="white")
+        self.playing_as_chessgpt.pack(pady=5, side="left")
         self.playing_as_stockfish = tk.Button(playing_as_frame, text="Stockfish", command=lambda: self.set_playing_as("stockfish"), font=small, bg=LIGHT_GREY, fg="white")
         self.playing_as_stockfish.pack(pady=5, side="left")
 
         self.should_quit = False
 
-    def update(self, currently_playing: str, updated: bool, turn_number: int) -> tuple[bool, str, bool]:
+    def update(self, currently_playing: str, updated: bool, turn_number: int) -> tuple[bool, str, bool, set]:
         self.currently_playing_label.config(text=f"{currently_playing.capitalize()} playing")
         self.currently_playing = currently_playing
         self.turn_number_label.config(text=f"Turn #{turn_number}")
 
-        # if currently_playing == "white":
-        #     self.compute_white_button.config(state="normal")
-        #     self.compute_black_button.config(state="disabled")
-        #     self.stockfish_black_button.config(state="disabled")
-        #     self.stockfish_white_button.config(state="normal")
-        # else:
-        #     self.compute_white_button.config(state="disabled")
-        #     self.compute_black_button.config(state="normal")
-        #     self.stockfish_black_button.config(state="normal")
-        #     self.stockfish_white_button.config(state="disabled")
+        if (self.playing_as != "manual" or self.opponent != "manual") and self.ai_state != "pause":
+            self.make_next_move()
+            if self.ai_state == "step":
+                self.set_ai_state("pause")
 
         if self.computed:
             if self.currently_playing == "white":
@@ -141,26 +137,43 @@ class Menu:
             else:
                 self.currently_playing = "white"
 
-        to_return = self.updated or updated or self.computed
+        updated_return = self.updated or updated or self.computed
         if self.updated or self.computed:
             self.updated = False
             self.computed = False
 
-        return to_return, self.currently_playing, self.unrestricted
+        changed_squares_copy = self.changed_squares.copy()
+        self.changed_squares.clear()
+
+        return updated_return, self.currently_playing, self.unrestricted, changed_squares_copy
 
     def set_playing_as(self, playing_as: str):
         self.playing_as = playing_as
         self.playing_as_manual.config(bg=GREEN if playing_as == "manual" else LIGHT_GREY)
         self.playing_as_random.config(bg=GREEN if playing_as == "random" else LIGHT_GREY)
-        self.playing_as_our_ai.config(bg=GREEN if playing_as == "our_ai" else LIGHT_GREY)
+        self.playing_as_chessgpt.config(bg=GREEN if playing_as == "chessgpt" else LIGHT_GREY)
         self.playing_as_stockfish.config(bg=GREEN if playing_as == "stockfish" else LIGHT_GREY)
+        self.play_button.config(state="normal" if (playing_as != "manual" or self.opponent != "manual") else "disabled")
+        self.pause_button.config(state="normal" if (playing_as != "manual" or self.opponent != "manual") else "disabled")
+        self.step_button.config(state="normal" if (playing_as != "manual" or self.opponent != "manual") else "disabled")
+        self.unrestricted_button.config(state="normal" if playing_as == "manual" else "disabled")
 
     def set_opponent(self, opponent: str):
         self.opponent = opponent
         self.opponent_manual.config(bg=GREEN if opponent == "manual" else LIGHT_GREY)
         self.opponent_random.config(bg=GREEN if opponent == "random" else LIGHT_GREY)
-        self.opponent_our_ai.config(bg=GREEN if opponent == "our_ai" else LIGHT_GREY)
+        self.opponent_chessgpt.config(bg=GREEN if opponent == "chessgpt" else LIGHT_GREY)
         self.opponent_stockfish.config(bg=GREEN if opponent == "stockfish" else LIGHT_GREY)
+        self.play_button.config(state="normal" if (opponent != "manual" or self.playing_as != "manual") else "disabled")
+        self.pause_button.config(state="normal" if (opponent != "manual" or self.playing_as != "manual") else "disabled")
+        self.step_button.config(state="normal" if (opponent != "manual" or self.playing_as != "manual") else "disabled")
+        self.unrestricted_button.config(state="normal" if opponent == "manual" else "disabled")
+
+    def set_ai_state(self, state: str):
+        self.ai_state = state
+        self.play_button.config(bg=GREEN if state == "play" else LIGHT_GREY)
+        self.pause_button.config(bg=GREEN if state == "pause" else LIGHT_GREY)
+        self.step_button.config(bg=GREEN if state == "step" else LIGHT_GREY)
 
     def set_restart(self, restart: Callable):
         self.restart = restart
@@ -172,15 +185,23 @@ class Menu:
         self.unrestricted = not self.unrestricted
         self.unrestricted_button.config(text="Restricted" if not self.unrestricted else "Unrestricted", bg=LIGHT_GREY if not self.unrestricted else "RED")
 
-    def compute_turn(self):
-        move = API.compute_turn(self.board.piecesMap, self.board.piecesList, self.currently_playing)
-        self.board.move_piece(move[0][0], move[0][1], move[1][0], move[1][1])
-        self.computed = True
+    def make_next_move(self):
+        move = None
+        match self.playing_as if self.currently_playing == "white" else self.opponent:
+            case "random":
+                move = API.random_turn(self.board.piecesMap, self.board.piecesList, self.currently_playing, float(self.ttc_entry.get()) / 1000)
+            case "stockfish":
+                move = API.stockfish_turn(self.board.piecesList, self.currently_playing, float(self.ttc_entry.get()) / 1000)
+            case "chessgpt":
+                move = API.chess_gpt_turn(self.board.piecesMap, self.board.piecesList, self.currently_playing, float(self.ttc_entry.get()) / 1000)
 
-    def stockfish_turn(self):
-        move = API.stockfish_turn(self.board.piecesList, self.currently_playing)
-        self.board.move_piece(move[0][0], move[0][1], move[1][0], move[1][1])
-        self.computed = True
+        if move is not None and self.ai_state != "pause":
+            result = self.board.move_piece(move[0][0], move[0][1], move[1][0], move[1][1])
+            if result is not None:
+                self.changed_squares = self.changed_squares.union(result)
+            self.changed_squares.add(move[0])
+            self.changed_squares.add(move[1])
+            self.computed = True
 
     def quit(self):
         self.master.destroy()

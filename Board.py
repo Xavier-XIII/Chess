@@ -47,6 +47,8 @@ class Board:
         self.piecesList:list[Piece] = []
         self.white_king:Piece|None = None
         self.black_king:Piece|None = None
+        self.last_from:tuple[int, int]|None = None
+        self.last_to:tuple[int, int]|None = None
 
     def clear(self):
         self.piecesMap = [[None for _ in range(8)] for _ in range(8)]
@@ -66,8 +68,8 @@ class Board:
     def get_piece(self, x: int, y: int) -> Piece:
         return self.piecesMap[x][y]
 
-    def move_piece(self, xFrom: int, yFrom:int, xTo: int, yTo: int):
-        if xTo == xFrom and yTo == yFrom: return
+    def move_piece(self, xFrom: int, yFrom:int, xTo: int, yTo: int) -> set[tuple[int, int]] | None:
+        if xTo == xFrom and yTo == yFrom: return None
 
         p = self.piecesMap[xTo][yTo]
 
@@ -81,6 +83,9 @@ class Board:
         self.piecesList.append(self.piecesMap[xTo][yTo])
         self.piecesMap[xFrom][yFrom] = None
 
+        self.last_from = (xFrom, yFrom)
+        self.last_to = (xTo, yTo)
+
         p = self.piecesMap[xTo][yTo]
         if isinstance(p, Pawn):
             p.reset_time_since_last_move()
@@ -89,14 +94,14 @@ class Board:
             if behind is not None and isinstance(behind, Pawn) and behind.colour != p.colour and behind.time_since_last_move == 1:
                 self.piecesList.remove(behind)
                 self.piecesMap[behind.x][behind.y] = None
+                return {(behind.x, behind.y)}
             # Promotion
             if (p.colour == "white" and yTo == 0) or (p.colour == "black" and yTo == 7):
                 self.piecesList.remove(p)
                 self.piecesMap[xTo][yTo] = make_piece(choose_piece(), p.colour, xTo, yTo)
                 self.piecesMap[xTo][yTo].has_moved = p.has_moved
                 self.piecesList.append(self.piecesMap[xTo][yTo])
-
-        if isinstance(p, King) and p.is_castling:
+        elif isinstance(p, King) and p.is_castling:
             if xTo == 6: # Kingside
                 rook = self.get_piece(7, yTo)
                 self.piecesList.remove(rook)
@@ -106,6 +111,7 @@ class Board:
                 rook.has_moved = True
                 self.piecesMap[7][yTo] = None
                 self.piecesList.append(rook)
+                return {(5, yTo), (7, yTo)}
             elif xTo == 2: # Queenside
                 rook = self.get_piece(0, yTo)
                 self.piecesList.remove(rook)
@@ -115,9 +121,11 @@ class Board:
                 rook.has_moved = True
                 self.piecesMap[0][yTo] = None
                 self.piecesList.append(rook)
+                return {(3, yTo), (0, yTo)}
             p.is_castling = False
 
         self.increase_time()
+        return None
 
     def increase_time(self):
         for piece in self.piecesList:
@@ -125,4 +133,3 @@ class Board:
                 piece.increase_time_since_last_move()
 
     # TODO: Chess coordinates to xy coordinates
-    # TODO: FEN string
