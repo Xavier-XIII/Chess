@@ -1,6 +1,6 @@
-from Piece import Piece, Pawn, make_piece
 import tkinter as tk
 
+from Piece import Piece, Pawn, make_piece, King
 
 to_return = ""
 def choose_piece() -> str:
@@ -42,10 +42,11 @@ def choose_piece() -> str:
 
 
 class Board:
-    def __init__(self, root):
+    def __init__(self):
         self.piecesMap:list[list[Piece | None]] = [[None for _ in range(8)] for _ in range(8)]
         self.piecesList:list[Piece] = []
-        self.root = root
+        self.white_king:Piece|None = None
+        self.black_king:Piece|None = None
 
     def clear(self):
         self.piecesMap = [[None for _ in range(8)] for _ in range(8)]
@@ -56,6 +57,11 @@ class Board:
         piece.x = x
         piece.y = y
         self.piecesList.append(piece)
+        if isinstance(piece, King):
+            if piece.colour == "white":
+                self.white_king = piece
+            else:
+                self.black_king = piece
 
     def get_piece(self, x: int, y: int) -> Piece:
         return self.piecesMap[x][y]
@@ -89,6 +95,27 @@ class Board:
                 self.piecesMap[xTo][yTo] = make_piece(choose_piece(), p.colour, xTo, yTo)
                 self.piecesMap[xTo][yTo].has_moved = p.has_moved
                 self.piecesList.append(self.piecesMap[xTo][yTo])
+
+        if isinstance(p, King) and p.is_castling:
+            if xTo == 6: # Kingside
+                rook = self.get_piece(7, yTo)
+                self.piecesList.remove(rook)
+                self.piecesMap[5][yTo] = rook
+                rook.x = 5
+                rook.y = yTo
+                rook.has_moved = True
+                self.piecesMap[7][yTo] = None
+                self.piecesList.append(rook)
+            elif xTo == 2: # Queenside
+                rook = self.get_piece(0, yTo)
+                self.piecesList.remove(rook)
+                self.piecesMap[3][yTo] = rook
+                rook.x = 3
+                rook.y = yTo
+                rook.has_moved = True
+                self.piecesMap[0][yTo] = None
+                self.piecesList.append(rook)
+            p.is_castling = False
 
         self.increase_time()
 

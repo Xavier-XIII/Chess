@@ -63,17 +63,17 @@ def get_linear_moves(piece:'Piece', board_map: list[list['Piece']], directions: 
     return moves
 
 
-def is_square_under_attack(x: int, y: int, colour: str, board_map: list[list['Piece']]) -> bool:
+def is_square_under_attack(px: int, py: int, colour: str, board_map: list[list['Piece']]) -> bool:
     # Pawn
     o = 1 if colour == "black" else -1
-    if within_bounds(x + 1, y + o) and isinstance(board_map[x + 1][y + o], Pawn) and board_map[x + 1][y + o].colour != colour:
+    if within_bounds(px + 1, py + o) and isinstance(board_map[px + 1][py + o], Pawn) and board_map[px + 1][py + o].colour != colour:
         return True
-    if within_bounds(x - 1, y + o) and isinstance(board_map[x - 1][y + o], Pawn) and board_map[x - 1][y + o].colour != colour:
+    if within_bounds(px - 1, py + o) and isinstance(board_map[px - 1][py + o], Pawn) and board_map[px - 1][py + o].colour != colour:
         return True
     # Knight
     for move in knight_offsets:
-        target_x = x + move[0]
-        target_y = y + move[1]
+        target_x = px + move[0]
+        target_y = py + move[1]
         if 0 <= target_x < 8 and 0 <= target_y < 8:
             p = board_map[target_x][target_y]
             if p is not None and isinstance(p, Knight) and p.colour != colour:
@@ -81,25 +81,30 @@ def is_square_under_attack(x: int, y: int, colour: str, board_map: list[list['Pi
     # Rook and Queen
     for d in rook_directions:
         for i in range(1, 8):
-            x = x + d[0] * i
-            y = y + d[1] * i
-            if x < 0 or x > 7 or y < 0 or y > 7: break
-            p = board_map[x][y]
-            if p is not None and p.colour != colour and (isinstance(p, Rook) or isinstance(p, Queen)):
-                return True
+            target_x = px + d[0] * i
+            target_y = py + d[1] * i
+            if target_x < 0 or target_x > 7 or target_y < 0 or target_y > 7: break
+            p = board_map[target_x][target_y]
+            if p is not None:
+                if (isinstance(p, Rook) or isinstance(p, Queen)) and p.colour != colour:
+                    return True
+                break
     # Bishop and Queen
     for d in bishop_directions:
         for i in range(1, 8):
-            x = x + d[0] * i
-            y = y + d[1] * i
-            if x < 0 or x > 7 or y < 0 or y > 7: break
-            p = board_map[x][y]
-            if p is not None and p.colour != colour and (isinstance(p, Bishop) or isinstance(p, Queen)):
-                return True
+            target_x = px + d[0] * i
+            target_y = py + d[1] * i
+            if target_x < 0 or target_x > 7 or target_y < 0 or target_y > 7: break
+            p = board_map[target_x][target_y]
+            if p is not None:
+                if (isinstance(p, Bishop) or isinstance(p, Queen)) and p.colour != colour:
+                    return True
+                break
+
     # King
     for move in king_offsets:
-        target_x = x + move[0]
-        target_y = y + move[1]
+        target_x = px + move[0]
+        target_y = py + move[1]
         if 0 <= target_x < 8 and 0 <= target_y < 8:
             p = board_map[target_x][target_y]
             if p is not None and isinstance(p, King) and p.colour != colour:
@@ -192,7 +197,6 @@ class Bishop(Piece):
 class Rook(Piece):
     def __init__(self, colour: str, x: int, y: int):
         super().__init__(colour, x, y)
-        self.can_castle = True
 
     def get_possible_moves(self, board_map: list[list[Piece]]) -> set[tuple[int, int]]:
         return get_linear_moves(self, board_map, rook_directions)
@@ -210,31 +214,34 @@ class King(Piece):
     def __init__(self, colour: str, x: int, y: int):
         super().__init__(colour, x, y)
         self.is_castling = False
+        self.in_check = False
 
     # TODO: castling
     def get_possible_moves(self, board_map: list[list[Piece]]) -> set[tuple[int, int]]:
         moves = get_offset_moves(self, board_map, king_offsets)
-        if (self.colour == "white" and self.y == 7) or (self.colour == "black" and self.y == 0):
+        if (self.colour == "white" and self.y == 7) or (self.colour == "black" and self.y == 0) and not self.in_check and not self.has_moved:
             # Kingside castling
             if (board_map[self.x + 1][self.y] is None and
-                    board_map[self.x + 2][self.y] is None):
+                    board_map[self.x + 2][self.y] is None and
+                    not is_square_under_attack(self.x + 2, self.y, self.colour, board_map)):
                 rook = board_map[self.x + 3][self.y]
-                if rook is not None and isinstance(rook, Rook) and rook.can_castle:
+                if rook is not None and isinstance(rook, Rook) and not rook.has_moved:
                     moves.add((self.x + 2, self.y))
                     self.is_castling = True
             # Queenside castling
             if (board_map[self.x - 1][self.y] is None and
                     board_map[self.x - 2][self.y] is None and
+                    not is_square_under_attack(self.x - 2, self.y, self.colour, board_map) and
                     board_map[self.x - 3][self.y] is None):
                 rook = board_map[self.x - 4][self.y]
-                if rook is not None and isinstance(rook, Rook) and rook.can_castle:
+                if rook is not None and isinstance(rook, Rook) and not rook.has_moved:
                     moves.add((self.x - 2, self.y))
                     self.is_castling = True
 
-        moves_to_remove = []
+        moves_to_remove = set()
         for move in moves:
             if is_square_under_attack(move[0], move[1], self.colour, board_map):
-                moves_to_remove.append(move)
+                moves_to_remove.add(move)
 
         return moves.difference(moves_to_remove)
 

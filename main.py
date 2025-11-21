@@ -10,16 +10,17 @@ from Renderer import Renderer
 
 unit = 60  # size of each square
 root = tk.Tk()
-board = Board(root)
+board = Board()
 menu = Menu(root, unit, board)
 renderer = Renderer(unit, board)
 display = renderer.display
-player_playing_as = "white"
 currently_playing = "white"
-turn_number = 0
+turn_number = 1
 selected_piece:Piece|None = None
 selected_piece_moves:set[tuple[int, int]] = set()
 updated = True
+tick_num = True
+unrestricted = False
 
 images = {
     "white": {
@@ -56,7 +57,7 @@ def set_selected_piece(piece: Piece | None):
     global selected_piece_moves
 
     selected_piece = piece
-    if piece is not None:
+    if piece is not None and not unrestricted:
         selected_piece_moves = piece.get_possible_moves(board.piecesMap)
     else:
         selected_piece_moves = None
@@ -80,20 +81,34 @@ def manage_click(x: int, y: int):
     global turn_number
     global selected_piece
     global updated
+    global unrestricted
     boardX = int(x / unit)
     boardY = int(y / unit)
 
     updated = True
 
-    if selected_piece is not None and boardX == selected_piece.x and boardY == selected_piece.y:
-        set_selected_piece(None)
-        return
+    if unrestricted:
+        piece = board.get_piece(boardX, boardY)
+        if selected_piece is None:
+            set_selected_piece(piece)
+            return
 
-    if selected_piece is None or (boardX, boardY) not in selected_piece_moves:
-        set_selected_piece(board.get_piece(boardX, boardY))
+        if piece is not selected_piece and selected_piece is not None:
+            board.move_piece(selected_piece.x, selected_piece.y, boardX, boardY)
+            set_selected_piece(None)
+        else:
+            if selected_piece is not None:
+                set_selected_piece(None)
     else:
-        if try_move_piece(selected_piece, boardX, boardY):
-            turn_number += 1
+        if selected_piece is not None and boardX == selected_piece.x and boardY == selected_piece.y:
+            set_selected_piece(None)
+            return
+
+        if selected_piece is None or (boardX, boardY) not in selected_piece_moves:
+            set_selected_piece(board.get_piece(boardX, boardY))
+        else:
+            if try_move_piece(selected_piece, boardX, boardY):
+                turn_number += 1
 
 
 def place_pieces():
@@ -131,21 +146,25 @@ place_pieces()
 def tick_game():
     global updated
     global currently_playing
+    global unrestricted
+    global tick_num
 
-    if updated:
+    if updated or tick_num < 5:
         renderer.draw_grid()
         if selected_piece is not None:
             renderer.draw_square(selected_piece.x, selected_piece.y, (210, 224, 99))
-            if selected_piece.colour == currently_playing: renderer.draw_possible_moves(selected_piece_moves)
+            if selected_piece.colour == currently_playing and not unrestricted: renderer.draw_possible_moves(selected_piece_moves)
         for piece in board.piecesList:
             renderer.draw_piece(get_image(piece), piece.x, piece.y)
         updated = False
+        tick_num += 1
 
     pygame.display.flip()
 
-    result = menu.update(currently_playing, updated)
+    result = menu.update(currently_playing, updated, turn_number)
     updated = result[0]
     currently_playing = result[1]
+    unrestricted = result[2]
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT or menu.should_quit:
