@@ -25,6 +25,7 @@ class Renderer:
         pygame.display.set_icon(logo)
 
         self.board = board
+        self.changed_squares:set[tuple[int, int]] = set()
 
     def draw_grid(self):
         for x in range(8):
@@ -35,23 +36,31 @@ class Renderer:
     def erase_quare(self, x: int, y: int):
         self.draw_square(x, y, DARK_GREEN if (x + y) % 2 == 0 else LIGHT_GREEN)
 
-    def draw_square(self, x: int, y: int, colour: tuple):
+    def draw_square(self, x: int, y: int, colour: tuple, changed: bool = True):
         rect = pygame.Rect(x * self.unit, y * self.unit, self.unit, self.unit)
         pygame.draw.rect(self.display, colour, rect)
+        if changed: self.changed_squares.add((x, y))
 
-    def draw_piece(self, image, x: int, y: int):
+    def draw_piece(self, image, x: int, y: int, changed: bool = True):
         self.display.blit(image, (x * self.unit, y * self.unit))
+        if changed: self.changed_squares.add((x, y))
 
-    def draw_circle(self, x: int, y: int, radius: int = base_radius):
+    def draw_circle(self, x: int, y: int, radius: int = base_radius, color: tuple = YELLOW):
         gfxdraw.filled_circle(self.display, x * self.unit + int(self.unit / 2),
-                              y * self.unit + int(self.unit / 2), radius, YELLOW)
+                              y * self.unit + int(self.unit / 2), radius, color)
         gfxdraw.aacircle(self.display, x * self.unit + int(self.unit / 2),
-                         y * self.unit + int(self.unit / 2), radius, YELLOW)
+                         y * self.unit + int(self.unit / 2), radius, color)
+        self.changed_squares.add((x, y))
 
     def draw_possible_moves(self, moves: set[tuple[int, int]]):
         for move in moves:
             target_x = move[0]
             target_y = move[1]
             if 0 <= target_x < 8 and 0 <= target_y < 8:
-                self.draw_circle(target_x, target_y)
+                if self.board.get_piece(target_x, target_y) is not None:
+                    self.draw_circle(target_x, target_y, color=(219, 53, 53))
+                else:
+                    self.draw_circle(target_x, target_y)
+                self.changed_squares.add((target_x, target_y))
+
 
